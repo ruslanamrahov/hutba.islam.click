@@ -1,0 +1,18 @@
+---
+interface Props {
+  years: number[];
+}
+
+const { years } = Astro.props;
+---
+
+<div class="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
+  {years.map((year) => (
+    <a
+      href={`/year/${year}`}
+      class="flex flex-col items-center justify-center gap-1 rounded-xl border border-border bg-card card-shadow p-5 transition-colors hover:border-primary"
+    >
+      <span class="text-xl font-bold text-card-foreground">{year}</span>
+    </a>
+  ))}
+</div>

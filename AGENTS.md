@@ -1,0 +1,138 @@
+# AGENTS.md
+
+## Purpose
+
+Static khutba catalog site [hutba.islam.click](https://hutba.islam.click). Content sourced from exported Telegram chat (`tg_chat/result.json`) and public Google Drive audio files. Astro 5 SSG + Tailwind v4 + shadcn/ui CSS tokens. Russian-only.
+
+## Architecture
+
+```
+hutba.islam.click/
+├── astro.config.mjs             # SSG, format: 'file', trailingSlash: 'never'
+├── package.json                 # Astro 5, Vue 3, Tailwind v4
+├── tsconfig.json                # Astro strict
+├── tg_chat/                     # Telegram export (read-only source)
+│   └── result.json              # 180 messages, catalog + khutba entries
+├── scripts/
+│   ├── parse_chat.py            # result.json → structured khutba data
+│   ├── scan_drive.py            # Playwright → Google Drive file IDs
+│   └── merge_data.py            # match + merge → final khutbas.json
+├── src/
+│   ├── data/khutbas.json        # Generated (gitignored)
+│   ├── styles/global.css        # shadcn/ui tokens, dark mode, Inter font
+│   ├── layouts/Layout.astro     # HTML shell, SEO, dark mode
+│   ├── components/
+│   │   ├── Header.astro         # Sticky nav, dark toggle
+│   │   ├── Footer.astro         # Minimal footer
+│   │   ├── KhutbaCard.astro     # Card in listings
+│   │   ├── AudioPlayer.vue      # Vue 3 audio player island
+│   │   ├── Breadcrumbs.astro    # Navigation breadcrumbs
+│   │   └── YearGrid.astro       # Year selection grid
+│   └── pages/
+│       ├── index.astro          # Homepage: hero + years + categories
+│       ├── years.astro          # All years listing
+│       ├── year/[year].astro    # Khutbas for a year, grouped by category
+│       ├── categories.astro     # All categories listing
+│       ├── category/[cat].astro # Khutbas in category across all years
+│       └── khutba/[id].astro    # Single khutba + audio player
+├── public/                      # favicon.svg, logo.svg
+└── dist/                        # Built output (gitignored)
+```
+
+## Local Development
+
+```bash
+cd hutba.islam.click
+npm install
+npm run dev          # Astro dev server on :4321
+npm run build        # Full build (runs data pipeline first)
+npm run data         # Run data pipeline only
+```
+
+## Data Pipeline
+
+Three Python scripts run in sequence via `npm run data`:
+
+1. **`parse_chat.py`** — reads `tg_chat/result.json`, extracts all catalog messages, parses khutba entries with number, title, category, year, Telegram links, text links. Outputs intermediate JSON.
+2. **`scan_drive.py`** — Playwright script navigates year folders on `drive.google.com/drive/folders/1jsNA4_ISBlBRhFKQKey1ke9eV3Bh9nJE`, extracts file IDs and names. Run independently when Drive contents change.
+3. **`merge_data.py`** — matches Telegram khutba titles to Drive audio filenames, generates final `src/data/khutbas.json`.
+
+## Design Conventions
+
+Design matches the reference project pattern (islamnury.org):
+- **Colors**: Green primary (`142.1 70.6% 45.3%`), HSL token system via CSS custom properties
+- **Font**: Inter Variable (body), no Arabic font needed (Russian-only)
+- **Dark mode**: `.dark` class + `localStorage` + `prefers-color-scheme`
+- **Cards**: `card-shadow`, `rounded-[14px]`, accent border on hover
+- **Layout**: `max-w-[1280px]`, sticky header with `backdrop-blur`
+- **Hero**: Subtle geometric SVG background pattern
+- **No code comments**: unless explicitly asked
+
+## Category Accent Colors
+
+Each category gets a distinct accent for visual differentiation:
+- `ramadan` — amber (`35 92% 50%`)
+- `sira` — green (default primary)
+- `companions` — teal (`175 84% 32%`)
+- `zul-hijjah` — warm red (`0 72% 51%`)
+- `muharram` — indigo (`239 84% 67%`)
+- `mawlid` — violet (`271 81% 56%`)
+- `aqida` — slate (`215 19% 35%`)
+- `names-of-allah` — emerald (`160 84% 39%`)
+- `shaban` — sky (`199 89% 48%`)
+- `new-year` — rose (`347 77% 50%`)
+- `forbidden-deeds` — orange (`25 95% 53%`)
+- `general` — green (default)
+
+## Media Hosting
+
+Audio and PDF files are hosted on **DigitalOcean Spaces** (bucket: `islamclick-coolify`, region: `ams3`). Public base URL: `https://islamclick-coolify.ams3.digitaloceanspaces.com`.
+
+### Migration Pipeline (Google Drive → DO Spaces)
+
+```
+Google Drive (453 mp3)  ──→  scan_drive.py  ──→  _drive_files.json
+      │                                                  │
+      │                                      download_drive.py (Playwright)
+      │                                                  │
+      │                                      scripts/_downloads/ (453 files, 4.1 GB)
+      │                                                  │
+      │                                      upload_spaces.py (boto3)
+      │                                                  │
+      ▼                                                  ▼
+tg_chat/files/ (22 pdf)  ──→  merge_data.py  ──→  khutbas.json (Spaces URLs)
+```
+
+### Audio URLs
+
+Format: `{SPACES_BASE}/hutba/{folder}/{filename}`  
+Example: `https://islamclick-coolify.ams3.digitaloceanspaces.com/hutba/2. Все хутбы 2015 года/Audio5. Наступил Рамадан.mp3`
+
+Files use `Content-Type: audio/mpeg` + `Content-Disposition: inline` for native `<audio>` streaming (no CORS issues, unlike Google Drive).
+
+### Re-scanning Google Drive
+
+When Drive contents change:
+```bash
+python3 scripts/scan_drive.py       # Re-extract file IDs
+python3 scripts/download_drive.py   # Download new files
+python3 scripts/upload_spaces.py    # Upload to DO Spaces
+npm run data && npm run build       # Regenerate + rebuild
+```
+
+Upload credentials are loaded from `../islamclick-infra.online/.env` (`DO_ENDPOINT`, `DO_ACCESS_KEY`, etc).
+
+## MCP Tools
+
+**astro**, **filesystem**, **playwright**, **sequentialthinking**, **context7** — use as needed.
+
+## Gotchas
+
+- `khutbas.json` is gitignored — regenerated via `npm run data` before each build
+- Audio player is a Vue 3 island with `client:visible` for lazy loading
+- Year folders on Drive are numbered: `1. Все хутбы до 2015 года` through `10. Все хутбы 2023 года`
+- Telegram catalog messages use mixed numbering: `🎙01 | Title` and `🎙⁰¹ | Title` — parser handles both
+- `trailingSlash: 'never'` prevents path issues with static file output
+- `build.format: 'file'` outputs flat `.html` files for clean URLs
+- Russian "Коран"/"Куран" transliteration normalized during audio matching
+- Thematic subfolders (Зуль-хиджжа, Сира, Сподвижники) are scanned recursively

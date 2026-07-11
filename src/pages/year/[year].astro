@@ -1,0 +1,69 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import Breadcrumbs from '../../components/Breadcrumbs.astro';
+import KhutbaCard from '../../components/KhutbaCard.astro';
+import khutbasData from '../../data/khutbas.json';
+
+export function getStaticPaths() {
+  const years = [...new Set(khutbasData.map((k) => k.year))].filter((y) => y !== 0);
+  return years.map((year) => ({ params: { year: String(year) } }));
+}
+
+const { year } = Astro.params;
+const yearNum = parseInt(year, 10);
+const khutbas = khutbasData
+  .filter((k) => k.year === yearNum)
+  .sort((a, b) => parseInt(a.number) - parseInt(b.number));
+
+const groupedByCategory: Record<string, typeof khutbas> = {};
+for (const k of khutbas) {
+  if (!groupedByCategory[k.category]) groupedByCategory[k.category] = [];
+  groupedByCategory[k.category].push(k);
+}
+
+const categoryLabels: Record<string, string> = {
+  'ramadan': 'Рамадан',
+  'sira': 'Жизнеописание Пророка ﷺ',
+  'companions': 'Сподвижники',
+  'zul-hijjah': 'Зуль-хиджжа',
+  'muharram': 'Мухаррам',
+  'mawlid': 'Маулид',
+  'aqida': 'Акыда и манхадж',
+  'names-of-allah': 'Имена Аллаха',
+  'shaban': 'Ша\'бан',
+  'new-year': 'Новый год',
+  'forbidden-deeds': 'Запретные деяния',
+  'general': 'Общие',
+};
+
+const yearLabel = yearNum < 2015 ? `До ${yearNum}` : `${yearNum} год`;
+---
+
+<Layout title={`${yearLabel} — Хутбы / Абу Яхья аль-Къирми`}>
+  <Breadcrumbs items={[{ label: 'Главная', href: '/' }, { label: 'Года', href: '/years' }, { label: yearLabel }]} />
+
+  <header class="mb-6 border-b border-border pb-6">
+    <h1 class="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">{yearLabel}</h1>
+    <span class="mt-4 inline-flex items-center rounded-full bg-secondary px-2.5 py-1 text-xs font-medium text-secondary-foreground">
+      {khutbas.length} хутб
+    </span>
+  </header>
+
+  {Object.keys(groupedByCategory).length === 0 && (
+    <p class="py-8 text-center text-muted-foreground">Нет хутб за этот год.</p>
+  )}
+
+  {Object.entries(groupedByCategory).map(([cat, entries]) => (
+    <section class="mb-8">
+      <h2 class="mb-3 text-base font-semibold text-foreground">
+        <a href={`/category/${cat}`} data-category={cat} class="cat-accent-text transition-colors hover:underline">
+          {categoryLabels[cat] || cat}
+        </a>
+        <span class="ml-2 text-sm font-normal text-muted-foreground">({entries.length})</span>
+      </h2>
+      <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {entries.map((k) => <KhutbaCard khutba={k} />)}
+      </div>
+    </section>
+  ))}
+</Layout>

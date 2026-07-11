@@ -1,0 +1,45 @@
+---
+import type { Khutba } from '../data/khutbas.json';
+
+interface Props {
+  khutba: Khutba;
+}
+
+const { khutba } = Astro.props;
+
+const categoryLabels: Record<string, string> = {
+  'ramadan': 'Рамадан',
+  'sira': 'Жизнеописание Пророка ﷺ',
+  'companions': 'Сподвижники',
+  'zul-hijjah': 'Зуль-хиджжа',
+  'muharram': 'Мухаррам',
+  'mawlid': 'Маулид',
+  'aqida': 'Акыда и манхадж',
+  'names-of-allah': 'Имена Аллаха',
+  'shaban': 'Ша\'бан',
+  'new-year': 'Новый год',
+  'forbidden-deeds': 'Запретные деяния',
+  'general': 'Общие',
+};
+---
+
+<a
+  href={`/khutba/${khutba.id}`}
+  data-category={khutba.category}
+  class="group flex flex-col gap-3 overflow-hidden rounded-[14px] border-2 border-transparent bg-card card-shadow p-5 transition-colors duration-200 hover:cat-accent-border focus-visible:cat-accent-border focus-visible:outline-none"
+>
+  <div class="flex items-start justify-between gap-3">
+    <span class="text-xs font-medium text-muted-foreground tabular-nums">#{khutba.number}</span>
+    {categoryLabels[khutba.category] && (
+      <span class="inline-flex shrink-0 items-center rounded-full bg-secondary px-2 py-0.5 text-[10px] font-medium text-secondary-foreground">
+        {categoryLabels[khutba.category]}
+      </span>
+    )}
+  </div>
+  <h3 class="text-base font-semibold leading-snug text-card-foreground">{khutba.title}</h3>
+  <div class="mt-auto flex items-center gap-2 text-xs text-muted-foreground">
+    <span>{khutba.year}</span>
+    {khutba.audioUrl && <span class="cat-accent-text">&bull; Аудио</span>}
+    {khutba.textUrl && <span>&bull; Текст</span>}
+  </div>
+</a>

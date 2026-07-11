@@ -1,0 +1,51 @@
+---
+import Layout from '../layouts/Layout.astro';
+import Breadcrumbs from '../components/Breadcrumbs.astro';
+import khutbasData from '../data/khutbas.json';
+
+const categoryLabels: Record<string, string> = {
+  'ramadan': 'Рамадан',
+  'sira': 'Жизнеописание Пророка ﷺ',
+  'companions': 'Сподвижники',
+  'zul-hijjah': 'Зуль-хиджжа',
+  'muharram': 'Мухаррам',
+  'mawlid': 'Маулид',
+  'aqida': 'Акыда и манхадж',
+  'names-of-allah': 'Имена Аллаха',
+  'shaban': 'Ша\'бан',
+  'new-year': 'Новый год',
+  'forbidden-deeds': 'Запретные деяния',
+  'general': 'Общие',
+};
+
+const categories = [...new Set(khutbasData.map((k) => k.category))];
+const categoryCounts = categories.map((cat) => ({
+  slug: cat,
+  label: categoryLabels[cat] || cat,
+  count: khutbasData.filter((k) => k.category === cat).length,
+}));
+---
+
+<Layout title="Темы — Хутбы / Абу Яхья аль-Къирми">
+  <Breadcrumbs items={[{ label: 'Главная', href: '/' }, { label: 'Темы' }]} />
+
+  <header class="mb-6 border-b border-border pb-6">
+    <h1 class="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">Темы</h1>
+  </header>
+
+  <div class="grid grid-cols-1 gap-4 pb-10 sm:grid-cols-2 lg:grid-cols-3">
+    {categoryCounts.map((cat) => (
+      <a
+        href={`/category/${cat.slug}`}
+        data-category={cat.slug}
+        class="flex items-center justify-between rounded-xl border-2 border-transparent bg-card card-shadow p-5 transition-colors hover:cat-accent-border"
+      >
+        <div>
+          <h2 class="text-base font-semibold text-card-foreground">{cat.label}</h2>
+          <p class="mt-1 text-sm text-muted-foreground">{cat.count} хутб</p>
+        </div>
+        <span class="cat-accent-text text-2xl">&rarr;</span>
+      </a>
+    ))}
+  </div>
+</Layout>

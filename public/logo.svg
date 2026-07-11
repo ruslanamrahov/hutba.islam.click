@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 50" fill="none">
+  <rect x="4" y="4" width="42" height="42" rx="10" fill="#16a34a"/>
+  <path d="M25 12c-3.3 0-6 2.7-6 6s2.7 6 6 6c1.2 0 2.3-.4 3.2-1l-1.5-1.5c-.5.3-1.1.5-1.7.5-1.9 0-3.5-1.6-3.5-3.5s1.6-3.5 3.5-3.5c1.2 0 2.3.6 2.9 1.5h-2.9v2h4.5c.1-.3.1-.7.1-1 0-2.8-2.2-5-5-5z" fill="white"/>
+  <path d="M22 26v-2h-2v-2h2v-2h2v2h2v2h-2v2h-2z" fill="white"/>
+  <text x="56" y="32" font-family="Inter, sans-serif" font-size="18" font-weight="700" fill="currentColor">Хутбы</text>
+  <text x="56" y="46" font-family="Inter, sans-serif" font-size="10" fill="#6b7280">Абу Яхья аль-Къирми</text>
+</svg>

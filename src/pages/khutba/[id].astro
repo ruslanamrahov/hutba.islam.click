@@ -1,0 +1,128 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import Breadcrumbs from '../../components/Breadcrumbs.astro';
+import AudioPlayer from '../../components/AudioPlayer.vue';
+import khutbasData from '../../data/khutbas.json';
+
+export function getStaticPaths() {
+  return khutbasData.map((k) => ({ params: { id: String(k.id) } }));
+}
+
+const { id } = Astro.params;
+const khutbaId = parseInt(id, 10);
+const khutba = khutbasData.find((k) => k.id === khutbaId);
+
+if (!khutba) {
+  return Astro.redirect('/404');
+}
+
+const categoryLabels: Record<string, string> = {
+  'ramadan': 'Рамадан',
+  'sira': 'Жизнеописание Пророка ﷺ',
+  'companions': 'Сподвижники',
+  'zul-hijjah': 'Зуль-хиджжа',
+  'muharram': 'Мухаррам',
+  'mawlid': 'Маулид',
+  'aqida': 'Акыда и манхадж',
+  'names-of-allah': 'Имена Аллаха',
+  'shaban': 'Ша\'бан',
+  'new-year': 'Новый год',
+  'forbidden-deeds': 'Запретные деяния',
+  'general': 'Общие',
+};
+
+const catLabel = categoryLabels[khutba.category] || khutba.category;
+const catHref = `/category/${khutba.category}`;
+const yearLabel = khutba.year < 2015 ? `До ${khutba.year}` : `${khutba.year}`;
+---
+
+<Layout
+  title={`${khutba.title} — Хутбы / Абу Яхья аль-Къирми`}
+  description={`Хутба «${khutba.title}» из категории «${catLabel}». ${khutba.year ? `${yearLabel} год.` : ''} Слушайте аудиозапись онлайн.`}
+  ogType="article"
+>
+  <Breadcrumbs
+    items={[
+      { label: 'Главная', href: '/' },
+      { label: 'Темы', href: '/categories' },
+      { label: catLabel, href: catHref },
+      { label: khutba.title },
+    ]}
+  />
+
+  <article class="mx-auto max-w-3xl pb-10">
+    <header class="mb-8 border-b border-border pb-6">
+      <div class="mb-3 flex flex-wrap items-center gap-2">
+        <a
+          href={catHref}
+          data-category={khutba.category}
+          class="cat-accent-bg inline-flex items-center rounded-full px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-primary-foreground dark:text-primary-foreground"
+        >
+          {catLabel}
+        </a>
+        {khutba.year > 0 && (
+          <a href={`/year/${khutba.year}`} class="inline-flex items-center rounded-full bg-secondary px-2.5 py-0.5 text-xs text-secondary-foreground transition-colors hover:bg-primary hover:text-primary-foreground">
+            {yearLabel}
+          </a>
+        )}
+      </div>
+      <h1 class="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
+        <span class="text-muted-foreground">#{khutba.number}</span> {khutba.title}
+      </h1>
+    </header>
+
+    <section class="mb-8">
+      <h2 class="mb-3 text-sm font-medium text-muted-foreground">Аудиозапись</h2>
+      {khutba.audioUrl ? (
+        <AudioPlayer src={khutba.audioUrl} client:visible />
+      ) : khutba.telegramUrl ? (
+        <a
+          href={khutba.telegramUrl}
+          target="_blank"
+          rel="noopener"
+          class="flex items-center gap-3 rounded-xl border border-border bg-card card-shadow p-4 transition-colors hover:border-primary"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0 text-muted-foreground"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>
+          <div>
+            <div class="text-sm font-medium text-card-foreground">Слушать аудио в Telegram</div>
+            <div class="text-xs text-muted-foreground">Откроется во встроенном плеере</div>
+          </div>
+        </a>
+      ) : (
+        <p class="text-sm text-muted-foreground">Аудиозапись недоступна</p>
+      )}
+    </section>
+
+    <div class="grid gap-4 sm:grid-cols-2">
+      {khutba.textUrl && (
+        <a
+          href={khutba.textUrl}
+          target="_blank"
+          rel="noopener"
+          class="flex items-center gap-3 rounded-xl border border-border bg-card card-shadow p-4 transition-colors hover:border-primary"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0 text-muted-foreground"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/></svg>
+          <div>
+            <div class="text-sm font-medium text-card-foreground">Читать текст</div>
+            <div class="text-xs text-muted-foreground">islam.click</div>
+          </div>
+        </a>
+      )}
+
+      {khutba.pdfUrl && (
+        <a
+          href={khutba.pdfUrl}
+          target="_blank"
+          rel="noopener"
+          class="flex items-center gap-3 rounded-xl border border-border bg-card card-shadow p-4 transition-colors hover:border-primary"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0 text-muted-foreground"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><line x1="16" x2="8" y1="13" y2="13"/><line x1="16" x2="8" y1="17" y2="17"/><line x1="10" x2="8" y1="9" y2="9"/></svg>
+          <div>
+            <div class="text-sm font-medium text-card-foreground">Скачать PDF</div>
+            <div class="text-xs text-muted-foreground">PDF</div>
+          </div>
+        </a>
+      )}
+    </div>
+  </article>
+</Layout>
