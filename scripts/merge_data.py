@@ -92,11 +92,11 @@ def match_best(title, candidates, name_key="name"):
 
 
 def year_from_folder(folder):
+    if "до 2015" in folder:
+        return 2014
     m = _re.search(r"(20\d\d)\s*года", folder)
     if m:
         return int(m.group(1))
-    if "до 2015" in folder:
-        return 2014
     return 0
 
 
