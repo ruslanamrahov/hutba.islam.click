@@ -1,6 +1,6 @@
 ---
 import Layout from '../layouts/Layout.astro';
-import YearGrid from '../components/YearGrid.astro';
+import KhutbaBrowser from '../components/KhutbaBrowser.vue';
 import khutbasData from '../data/khutbas.json';
 
 const categoryLabels: Record<string, string> = {
@@ -17,14 +17,6 @@ const categoryLabels: Record<string, string> = {
   'forbidden-deeds': 'Запретные деяния',
   'general': 'Общие',
 };
-
-const years = [...new Set(khutbasData.map((k) => k.year))].filter((y) => y !== 0).sort((a, b) => a - b);
-const categories = [...new Set(khutbasData.map((k) => k.category))];
-const categoryCounts = categories.map((cat) => ({
-  slug: cat,
-  label: categoryLabels[cat] || cat,
-  count: khutbasData.filter((k) => k.category === cat).length,
-}));
 ---
 
 <Layout title="Хутбы / Абу Яхья аль-Къирми — Каталог хутб">
@@ -40,42 +32,18 @@ const categoryCounts = categories.map((cat) => ({
       <li>📝 Полный текст</li>
       <li>📕 PDF</li>
     </ul>
-    <div class="mt-8 flex flex-wrap items-center justify-center gap-3">
-      <a href="/years" class="inline-flex items-center rounded-lg bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90">
-        По годам
-      </a>
-      <a href="/categories" class="inline-flex items-center rounded-lg border border-border bg-card px-5 py-2.5 text-sm font-medium text-card-foreground transition-colors hover:border-primary">
-        По темам
+    <div class="mt-8">
+      <a href="#browse" class="inline-flex items-center rounded-lg bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90">
+        Смотреть каталог
       </a>
     </div>
-  </section>
-
-  <section class="mt-12">
-    <div class="mb-4 flex items-center justify-between">
-      <h2 class="text-lg font-semibold text-foreground">Года</h2>
-      <a href="/years" class="text-sm text-muted-foreground transition-colors hover:text-foreground">Все года &rarr;</a>
-    </div>
-    <YearGrid years={years} />
   </section>
 
   <section class="mt-12 pb-10">
-    <div class="mb-4 flex items-center justify-between">
-      <h2 class="text-lg font-semibold text-foreground">Темы</h2>
-      <a href="/categories" class="text-sm text-muted-foreground transition-colors hover:text-foreground">Все темы &rarr;</a>
-    </div>
-    <div class="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-      {categoryCounts.map((cat) => (
-        <a
-          href={`/category/${cat.slug}`}
-          data-category={cat.slug}
-          class="flex flex-col items-center gap-2 rounded-xl border border-border bg-card card-shadow p-4 transition-colors hover:cat-accent-border"
-        >
-          <span class="text-sm font-semibold text-card-foreground">{cat.label}</span>
-          <span class="rounded-full bg-secondary px-2 py-0.5 text-xs font-medium text-secondary-foreground">
-            {cat.count}
-          </span>
-        </a>
-      ))}
-    </div>
+    <KhutbaBrowser
+      khutbas={khutbasData}
+      categoryLabels={categoryLabels}
+      client:load
+    />
   </section>
 </Layout>
