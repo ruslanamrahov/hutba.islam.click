@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue';
 import AccordionSection from './AccordionSection.vue';
+import AudioPlayer from './AudioPlayer.vue';
 
 interface Khutba {
   number: string;
@@ -17,10 +18,6 @@ interface Khutba {
 const props = defineProps<{
   khutbas: Khutba[];
   categoryLabels: Record<string, string>;
-}>();
-
-const emit = defineEmits<{
-  'select-khutba': [khutba: Khutba];
 }>();
 
 const activeTab = ref<'years' | 'categories'>('years');
@@ -58,25 +55,11 @@ const categories = computed(() => {
 
 const expandedYears = ref<Set<number>>(new Set());
 const expandedCategories = ref<Set<string>>(new Set());
-const yearCategoriesExpanded = ref<Map<string, Set<string>>>(new Map());
-const categoryYearsExpanded = ref<Map<string, Set<number>>>(new Map());
 
 function getKhutbasForYear(year: number): Khutba[] {
   return props.khutbas
     .filter((k) => k.year === year)
     .sort((a, b) => parseInt(a.number) - parseInt(b.number));
-}
-
-function getCategoriesForYear(year: number) {
-  const entries = getKhutbasForYear(year);
-  const cats = [...new Set(entries.map((k) => k.category))];
-  return cats.map((slug) => ({
-    slug,
-    label: props.categoryLabels[slug] || slug,
-    count: entries.filter((k) => k.category === slug).length,
-    khutbas: entries.filter((k) => k.category === slug),
-    accent: categoryAccentHsl[slug] || '',
-  }));
 }
 
 function getKhutbasForCategory(cat: string): Khutba[] {
@@ -85,72 +68,22 @@ function getKhutbasForCategory(cat: string): Khutba[] {
     .sort((a, b) => parseInt(a.number) - parseInt(b.number));
 }
 
-function getYearsForCategory(cat: string) {
-  const entries = getKhutbasForCategory(cat);
-  const yrs = [...new Set(entries.map((k) => k.year))]
-    .filter((y) => y !== 0)
-    .sort((a, b) => a - b);
-  return yrs.map((year) => ({
-    year,
-    count: entries.filter((k) => k.year === year).length,
-    khutbas: entries.filter((k) => k.year === year),
-  }));
-}
-
 function toggleYear(year: number) {
   const s = new Set(expandedYears.value);
-  if (s.has(year)) {
-    s.delete(year);
-  } else {
-    s.add(year);
-  }
+  if (s.has(year)) s.delete(year);
+  else s.add(year);
   expandedYears.value = s;
 }
 
 function toggleCategory(cat: string) {
   const s = new Set(expandedCategories.value);
-  if (s.has(cat)) {
-    s.delete(cat);
-  } else {
-    s.add(cat);
-  }
+  if (s.has(cat)) s.delete(cat);
+  else s.add(cat);
   expandedCategories.value = s;
 }
 
-function toggleYearCategory(year: number, cat: string) {
-  const key = String(year);
-  const map = new Map(yearCategoriesExpanded.value);
-  if (!map.has(key)) map.set(key, new Set());
-  const inner = new Set(map.get(key)!);
-  if (inner.has(cat)) {
-    inner.delete(cat);
-  } else {
-    inner.add(cat);
-  }
-  map.set(key, inner);
-  yearCategoriesExpanded.value = map;
-}
-
-function isYearCategoryExpanded(year: number, cat: string): boolean {
-  const key = String(year);
-  return yearCategoriesExpanded.value.get(key)?.has(cat) ?? false;
-}
-
-function toggleCategoryYear(cat: string, year: number) {
-  const map = new Map(categoryYearsExpanded.value);
-  if (!map.has(cat)) map.set(cat, new Set());
-  const inner = new Set(map.get(cat)!);
-  if (inner.has(year)) {
-    inner.delete(year);
-  } else {
-    inner.add(year);
-  }
-  map.set(cat, inner);
-  categoryYearsExpanded.value = map;
-}
-
-function isCategoryYearExpanded(cat: string, year: number): boolean {
-  return categoryYearsExpanded.value.get(cat)?.has(year) ?? false;
+function yearLabel(y: number): string {
+  return y < 2015 ? `До ${y + 1}` : `${y} год`;
 }
 
 function handleHash() {
@@ -210,44 +143,69 @@ watch(activeTab, () => {
     </div>
 
     <div v-show="activeTab === 'years'" role="tabpanel" class="space-y-2">
-      <div v-for="year in years" :key="year" :id="`year-${year}`" class="rounded-xl border border-border bg-card card-shadow overflow-hidden">
+      <div
+        v-for="year in years"
+        :key="year"
+        :id="`year-${year}`"
+        class="rounded-xl border border-border bg-card card-shadow overflow-hidden"
+      >
         <AccordionSection
-          :title="year < 2015 ? `До ${year}` : `${year} год`"
+          :title="yearLabel(year)"
           :count="getKhutbasForYear(year).length"
           :expanded="expandedYears.has(year)"
           @toggle="toggleYear(year); writeHash('year', String(year))"
         >
-          <div class="space-y-1">
-            <div v-for="cat in getCategoriesForYear(year)" :key="cat.slug">
-              <AccordionSection
-                :title="cat.label"
-                :count="cat.count"
-                :accent-hsl="cat.accent"
-                :expanded="isYearCategoryExpanded(year, cat.slug)"
-                :level="1"
-                @toggle="toggleYearCategory(year, cat.slug)"
+          <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <div
+              v-for="k in getKhutbasForYear(year)"
+              :key="k.id"
+              :data-category="k.category"
+              class="rounded-[14px] border-2 border-transparent bg-card card-shadow p-5"
+            >
+              <div class="flex items-start justify-between gap-2 mb-2">
+                <span class="text-xs font-medium text-muted-foreground tabular-nums">#{{ k.number }}</span>
+                <span
+                  class="inline-flex shrink-0 items-center rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-primary-foreground cat-accent-bg"
+                >{{ categoryLabels[k.category] || k.category }}</span>
+              </div>
+
+              <h3 class="text-sm font-semibold leading-snug text-card-foreground mb-3">{{ k.title }}</h3>
+
+              <AudioPlayer v-if="k.audioUrl" :src="k.audioUrl" preload="none" />
+
+              <a
+                v-else-if="k.telegramUrl"
+                :href="k.telegramUrl"
+                target="_blank"
+                rel="noopener"
+                class="inline-flex items-center gap-2 rounded-lg border border-border px-4 py-2.5 text-sm text-muted-foreground hover:text-foreground hover:border-primary transition-colors"
               >
-                <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                  <button
-                    v-for="k in cat.khutbas"
-                    :key="k.id"
-                    type="button"
-                    class="group flex flex-col gap-2 text-left rounded-[14px] border-2 border-transparent bg-card card-shadow p-4 transition-colors duration-200 hover:cat-accent-border focus-visible:cat-accent-border focus-visible:outline-none w-full"
-                    :style="{ '--cat-accent': `hsl(${cat.accent})` }"
-                    @click="emit('select-khutba', k)"
-                  >
-                    <div class="flex items-start justify-between gap-2">
-                      <span class="text-xs font-medium text-muted-foreground tabular-nums">#{{ k.number }}</span>
-                    </div>
-                    <h3 class="text-sm font-semibold leading-snug text-card-foreground">{{ k.title }}</h3>
-                    <div class="flex items-center gap-2 text-xs text-muted-foreground">
-                      <span>{{ k.year }}</span>
-                      <span v-if="k.audioUrl" class="cat-accent-text">&bull; Аудио</span>
-                      <span v-if="k.textUrl">&bull; Текст</span>
-                    </div>
-                  </button>
-                </div>
-              </AccordionSection>
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>
+                Слушать в Telegram
+              </a>
+
+              <div class="flex flex-wrap items-center gap-x-3 gap-y-1.5 mt-3 pt-3 border-t border-border">
+                <a v-if="k.textUrl" :href="k.textUrl" target="_blank" rel="noopener"
+                   class="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/></svg>
+                  Текст
+                </a>
+                <a v-if="k.pdfUrl" :href="k.pdfUrl" target="_blank" rel="noopener"
+                   class="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><line x1="16" x2="8" y1="13" y2="13"/><line x1="16" x2="8" y1="17" y2="17"/></svg>
+                  PDF
+                </a>
+                <a v-if="k.telegramUrl" :href="k.telegramUrl" target="_blank" rel="noopener"
+                   class="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                  Telegram
+                </a>
+                <a :href="`/khutba/${k.id}`"
+                   class="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors sm:ml-auto">
+                  Подробнее
+                  <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/></svg>
+                </a>
+              </div>
             </div>
           </div>
         </AccordionSection>
@@ -255,7 +213,12 @@ watch(activeTab, () => {
     </div>
 
     <div v-show="activeTab === 'categories'" role="tabpanel" class="space-y-2">
-      <div v-for="cat in categories" :key="cat.slug" :id="`cat-${cat.slug}`" class="rounded-xl border border-border bg-card card-shadow overflow-hidden">
+      <div
+        v-for="cat in categories"
+        :key="cat.slug"
+        :id="`cat-${cat.slug}`"
+        class="rounded-xl border border-border bg-card card-shadow overflow-hidden"
+      >
         <AccordionSection
           :title="cat.label"
           :count="cat.count"
@@ -263,36 +226,57 @@ watch(activeTab, () => {
           :expanded="expandedCategories.has(cat.slug)"
           @toggle="toggleCategory(cat.slug); writeHash('cat', cat.slug)"
         >
-          <div class="space-y-1">
-            <div v-for="yr in getYearsForCategory(cat.slug)" :key="yr.year">
-              <AccordionSection
-                :title="yr.year < 2015 ? `До ${yr.year}` : `${yr.year} год`"
-                :count="yr.count"
-                :expanded="isCategoryYearExpanded(cat.slug, yr.year)"
-                :level="1"
-                @toggle="toggleCategoryYear(cat.slug, yr.year)"
+          <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <div
+              v-for="k in getKhutbasForCategory(cat.slug)"
+              :key="k.id"
+              :data-category="k.category"
+              class="rounded-[14px] border-2 border-transparent bg-card card-shadow p-5"
+            >
+              <div class="flex items-start justify-between gap-2 mb-2">
+                <span class="text-xs font-medium text-muted-foreground tabular-nums">#{{ k.number }}</span>
+                <span class="inline-flex shrink-0 items-center rounded-full bg-secondary px-2 py-0.5 text-xs text-secondary-foreground">
+                  {{ k.year > 0 ? (k.year < 2015 ? `До ${k.year + 1}` : k.year) : '' }}
+                </span>
+              </div>
+
+              <h3 class="text-sm font-semibold leading-snug text-card-foreground mb-3">{{ k.title }}</h3>
+
+              <AudioPlayer v-if="k.audioUrl" :src="k.audioUrl" preload="none" />
+
+              <a
+                v-else-if="k.telegramUrl"
+                :href="k.telegramUrl"
+                target="_blank"
+                rel="noopener"
+                class="inline-flex items-center gap-2 rounded-lg border border-border px-4 py-2.5 text-sm text-muted-foreground hover:text-foreground hover:border-primary transition-colors"
               >
-                <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                  <button
-                    v-for="k in yr.khutbas"
-                    :key="k.id"
-                    type="button"
-                    class="group flex flex-col gap-2 text-left rounded-[14px] border-2 border-transparent bg-card card-shadow p-4 transition-colors duration-200 hover:cat-accent-border focus-visible:cat-accent-border focus-visible:outline-none w-full"
-                    :style="{ '--cat-accent': `hsl(${cat.accent})` }"
-                    @click="emit('select-khutba', k)"
-                  >
-                    <div class="flex items-start justify-between gap-2">
-                      <span class="text-xs font-medium text-muted-foreground tabular-nums">#{{ k.number }}</span>
-                    </div>
-                    <h3 class="text-sm font-semibold leading-snug text-card-foreground">{{ k.title }}</h3>
-                    <div class="flex items-center gap-2 text-xs text-muted-foreground">
-                      <span>{{ k.year }}</span>
-                      <span v-if="k.audioUrl" class="cat-accent-text">&bull; Аудио</span>
-                      <span v-if="k.textUrl">&bull; Текст</span>
-                    </div>
-                  </button>
-                </div>
-              </AccordionSection>
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>
+                Слушать в Telegram
+              </a>
+
+              <div class="flex flex-wrap items-center gap-x-3 gap-y-1.5 mt-3 pt-3 border-t border-border">
+                <a v-if="k.textUrl" :href="k.textUrl" target="_blank" rel="noopener"
+                   class="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/></svg>
+                  Текст
+                </a>
+                <a v-if="k.pdfUrl" :href="k.pdfUrl" target="_blank" rel="noopener"
+                   class="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><line x1="16" x2="8" y1="13" y2="13"/><line x1="16" x2="8" y1="17" y2="17"/></svg>
+                  PDF
+                </a>
+                <a v-if="k.telegramUrl" :href="k.telegramUrl" target="_blank" rel="noopener"
+                   class="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                  Telegram
+                </a>
+                <a :href="`/khutba/${k.id}`"
+                   class="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors sm:ml-auto">
+                  Подробнее
+                  <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/></svg>
+                </a>
+              </div>
             </div>
           </div>
         </AccordionSection>

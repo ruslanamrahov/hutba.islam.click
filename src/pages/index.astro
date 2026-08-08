@@ -1,6 +1,6 @@
 ---
 import Layout from '../layouts/Layout.astro';
-import KhutbaBrowser from '../components/KhutbaBrowser.vue';
+import KhutbaAccordion from '../components/KhutbaAccordion.vue';
 import khutbasData from '../data/khutbas.json';
 
 const categoryLabels: Record<string, string> = {
@@ -32,15 +32,10 @@ const categoryLabels: Record<string, string> = {
       <li>📝 Полный текст</li>
       <li>📕 PDF</li>
     </ul>
-    <div class="mt-8">
-      <a href="#browse" class="inline-flex items-center rounded-lg bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90">
-        Смотреть каталог
-      </a>
-    </div>
   </section>
 
   <section class="mt-12 pb-10">
-    <KhutbaBrowser
+    <KhutbaAccordion
       khutbas={khutbasData}
       categoryLabels={categoryLabels}
       client:load

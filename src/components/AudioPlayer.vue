@@ -1,9 +1,12 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   src: string;
-}>();
+  preload?: string;
+}>(), {
+  preload: 'metadata',
+});
 
 const audioRef = ref<HTMLAudioElement>();
 const playing = ref(false);
@@ -63,7 +66,7 @@ function onLoaded() {
       <audio
         ref="audioRef"
         :src="src"
-        preload="metadata"
+        :preload="preload"
         @timeupdate="onTimeUpdate"
         @loadedmetadata="onLoaded"
         @play="playing = true"

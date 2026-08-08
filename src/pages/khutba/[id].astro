@@ -33,7 +33,7 @@ const categoryLabels: Record<string, string> = {
 
 const catLabel = categoryLabels[khutba.category] || khutba.category;
 const catHref = `/category/${khutba.category}`;
-const yearLabel = khutba.year < 2015 ? `До ${khutba.year}` : `${khutba.year}`;
+const yearLabel = khutba.year < 2015 ? `До ${khutba.year + 1}` : `${khutba.year}`;
 ---
 
 <Layout
