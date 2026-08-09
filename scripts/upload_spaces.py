@@ -23,6 +23,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 DRIVE_INPUT = BASE_DIR / "scripts" / "_drive_files.json"
 DOWNLOAD_DIR = BASE_DIR / "scripts" / "_downloads"
 PDF_DIR = BASE_DIR / "tg_chat" / "files"
+CHAT_EXPORT_PDF_DIR = BASE_DIR / "ChatExport_2026-08-09" / "files"
 ENV_FILE = Path(__file__).resolve().parent.parent.parent / "islamclick-infra.online" / ".env"
 
 PUBLIC_BASE = "https://islamclick-coolify.ams3.digitaloceanspaces.com"
@@ -133,13 +134,23 @@ def gather_audio_files():
 
 
 def gather_pdf_files():
-    """Return list of {local: path, folder: 'pdfs'} for PDF files."""
-    if not PDF_DIR.exists():
-        return []
+    """Return list of {local: path, folder: 'pdfs'} for PDF files.
 
+    Scans both ChatExport and legacy tg_chat directories. Deduplicates by
+    filename (ChatExport takes priority as the primary source).
+    """
+    seen = set()
     result = []
-    for f in PDF_DIR.iterdir():
-        if f.suffix.lower() == ".pdf" and not "_thumb" in f.name:
+
+    for pdf_dir in (CHAT_EXPORT_PDF_DIR, PDF_DIR):
+        if not pdf_dir.exists():
+            continue
+        for f in pdf_dir.iterdir():
+            if f.suffix.lower() != ".pdf" or "_thumb" in f.name:
+                continue
+            if f.name in seen:
+                continue
+            seen.add(f.name)
             result.append({"local": str(f), "folder": "pdfs"})
 
     return result

@@ -8,12 +8,14 @@ catalog (category + Telegram/text links) where a title match exists.
 
 import json
 import re as _re
+import unicodedata
 from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 INPUT = BASE_DIR / "scripts" / "_parsed.json"
 DRIVE_INPUT = BASE_DIR / "scripts" / "_drive_files.json"
 PDF_DIR = BASE_DIR / "tg_chat" / "files"
+CHAT_EXPORT_PDF_DIR = BASE_DIR / "ChatExport_2026-08-09" / "files"
 OUTPUT = BASE_DIR / "src" / "data" / "khutbas.json"
 
 SPACES_BASE = "https://islamclick-coolify.ams3.digitaloceanspaces.com"
@@ -49,19 +51,42 @@ def load_drive_files():
 
 
 def load_local_pdfs():
-    if not PDF_DIR.exists():
-        return []
+    """Scan known PDF directories for matching.
+    
+    ChatExport_2026-08-09 is the primary source; tg_chat/files is the legacy
+    directory with a handful of pre-existing PDFs.
+    """
+    seen = set()
     pdfs = []
-    for f in PDF_DIR.iterdir():
-        if f.is_file() and f.suffix.lower() == ".pdf" and "_thumb" not in f.name:
-            pdfs.append({"name": f.stem, "filename": f.name, "path": str(f)})
+
+    for pdf_dir in (CHAT_EXPORT_PDF_DIR, PDF_DIR):
+        if not pdf_dir.exists():
+            continue
+        for f in pdf_dir.iterdir():
+            if not f.is_file() or f.suffix.lower() != ".pdf":
+                continue
+            if "_thumb" in f.name:
+                continue
+            if f.name in seen:
+                continue
+            seen.add(f.name)
+
+            clean = f.stem
+            clean = _re.sub(r"^\d+[_\.]\s*", "", clean)
+            clean = _re.sub(r"[_\(\s]\d+[\)]?$", "", clean)
+            clean = _re.sub(r"_for_Pdf.*|\.docx.*$", "", clean, flags=_re.IGNORECASE)
+            clean = clean.strip()
+            pdfs.append({"name": clean, "filename": f.name, "path": str(f)})
+
     return pdfs
 
 
 def clean_str(s):
+    s = unicodedata.normalize("NFC", s)
     s = s.lower()
     s = _re.sub(r"куран", "коран", s)
     s = s.replace("ё", "е")
+    s = s.replace("ъ", "")
     return _re.sub(r"[^a-zа-яе0-9]", "", s)
 
 
