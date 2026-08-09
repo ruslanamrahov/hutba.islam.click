@@ -161,7 +161,7 @@ watch(activeTab, () => {
           :expanded="expandedYears.has(year)"
           @toggle="toggleYear(year); writeHash('year', String(year))"
         >
-          <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 items-start">
             <div
               v-for="k in getKhutbasForYear(year)"
               :key="k.id"
@@ -223,7 +223,7 @@ watch(activeTab, () => {
           :expanded="expandedCategories.has(cat.slug)"
           @toggle="toggleCategory(cat.slug); writeHash('cat', cat.slug)"
         >
-          <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 items-start">
             <div
               v-for="k in getKhutbasForCategory(cat.slug)"
               :key="k.id"
