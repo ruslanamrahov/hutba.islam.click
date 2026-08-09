@@ -185,6 +185,16 @@ watch(activeTab, () => {
                 <span
                   class="shrink-0 inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-primary-foreground cat-accent-bg"
                 >{{ categoryLabels[k.category] || k.category }}</span>
+                <a
+                  v-if="k.pdfUrl"
+                  :href="k.pdfUrl"
+                  target="_blank"
+                  rel="noopener"
+                  class="shrink-0 text-muted-foreground hover:text-primary transition-colors"
+                  title="Скачать PDF"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><line x1="16" x2="8" y1="13" y2="13"/><line x1="16" x2="8" y1="17" y2="17"/></svg>
+                </a>
                 <a :href="`/khutba/${k.id}`" class="shrink-0 text-muted-foreground hover:text-foreground transition-colors" title="Подробнее">
                   <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/></svg>
                 </a>
@@ -247,6 +257,16 @@ watch(activeTab, () => {
                 <span class="inline-flex shrink-0 items-center rounded-full bg-secondary px-2 py-0.5 text-xs text-secondary-foreground">
                   {{ k.year > 0 ? (k.year < 2015 ? `До ${k.year + 1}` : k.year) : '' }}
                 </span>
+                <a
+                  v-if="k.pdfUrl"
+                  :href="k.pdfUrl"
+                  target="_blank"
+                  rel="noopener"
+                  class="shrink-0 text-muted-foreground hover:text-primary transition-colors"
+                  title="Скачать PDF"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><line x1="16" x2="8" y1="13" y2="13"/><line x1="16" x2="8" y1="17" y2="17"/></svg>
+                </a>
                 <a :href="`/khutba/${k.id}`" class="shrink-0 text-muted-foreground hover:text-foreground transition-colors" title="Подробнее">
                   <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/></svg>
                 </a>
