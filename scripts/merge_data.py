@@ -14,6 +14,7 @@ from pathlib import Path
 BASE_DIR = Path(__file__).resolve().parent.parent
 INPUT = BASE_DIR / "scripts" / "_parsed.json"
 DRIVE_INPUT = BASE_DIR / "scripts" / "_drive_files.json"
+ABUYAHYA_INPUT = BASE_DIR / "scripts" / "_abuyahya_categories.json"
 PDF_DIR = BASE_DIR / "tg_chat" / "files"
 CHAT_EXPORT_PDF_DIR = BASE_DIR / "ChatExport_2026-08-09" / "files"
 OUTPUT = BASE_DIR / "src" / "data" / "khutbas.json"
@@ -21,9 +22,9 @@ OUTPUT = BASE_DIR / "src" / "data" / "khutbas.json"
 SPACES_BASE = "https://islamclick-coolify.ams3.digitaloceanspaces.com"
 
 THEMATIC_FOLDERS = {
-    "Зуль-хиджжа": "zul-hijjah",
+    "Зуль-хиджжа": "ibadaty",
     "жизнеописании": "sira",
-    "сподвижниках": "companions",
+    "сподвижниках": "spodvizhniki",
 }
 
 # Conservative, unambiguous keywords only — used as a last resort before
@@ -34,8 +35,8 @@ CATEGORY_KEYWORDS = [
     ("muharram", ["мухаррам", "ашура", "ашуры", "день ашура"]),
     ("mawlid", ["маулид", "мавлид"]),
     ("shaban", ["ша'бан", "шаабан", "бараат"]),
-    ("companions", ["сподвижник"]),
-    ("forbidden-deeds", ["ростовщичеств", "колдовств", "сглаз", "прелюбодеян", "злослови"]),
+    ("spodvizhniki", ["сподвижник"]),
+    ("zapretnye-deyaniya", ["ростовщичеств", "колдовств", "сглаз", "прелюбодеян", "злослови"]),
 ]
 
 
@@ -47,6 +48,14 @@ def load_drive_files():
     if DRIVE_INPUT.exists():
         with open(DRIVE_INPUT, "r", encoding="utf-8") as f:
             return json.load(f)
+    return []
+
+
+def load_abuyahya_categories():
+    if ABUYAHYA_INPUT.exists():
+        with open(ABUYAHYA_INPUT, "r", encoding="utf-8") as f:
+            entries = json.load(f)
+        return [{"name": e["title"], "category": e["category"]} for e in entries]
     return []
 
 
@@ -157,6 +166,7 @@ def merge():
         tg_catalog = json.load(f)
 
     drive_files = load_drive_files()
+    abuyahya_cats = load_abuyahya_categories()
     local_pdfs = load_local_pdfs()
 
     # Telegram catalog as enrichment candidates (title -> category + links).
@@ -174,6 +184,7 @@ def merge():
     khutbas = []
     enriched = 0
     keyword_tagged = 0
+    abuyahya_overrides = 0
     for df in drive_files:
         folder = df["folder"]
         title = title_from_filename(df["name"])
@@ -204,11 +215,24 @@ def merge():
         if category is None:
             category = "general"
 
+        number = number_from_filename(df["name"])
+        abu_match = match_best(title, abuyahya_cats)
+        if abu_match:
+            category = abu_match["category"]
+            abuyahya_overrides += 1
+
+        if category == "companions":
+            category = "spodvizhniki"
+        elif category == "forbidden-deeds":
+            category = "zapretnye-deyaniya"
+        elif category == "aqida":
+            category = "akida-i-manhadzh"
+
         audio_folder = safe_name(folder)
         audio_file = safe_name(df["name"])
         khutbas.append(
             {
-                "number": number_from_filename(df["name"]),
+                "number": number,
                 "title": title,
                 "year": year,
                 "category": category,
@@ -242,6 +266,7 @@ def merge():
     print(f"Built {len(khutbas)} khutbas from {len(drive_files)} audio files → {OUTPUT}")
     print(f"Enriched from Telegram catalog: {enriched}")
     print(f"Categorized by keyword fallback: {keyword_tagged}")
+    print(f"Categorized from abuyahya.net: {abuyahya_overrides}")
     print(f"By year: {dict(sorted(years.items(), key=lambda x: (str(x[0]), x[0])))}")
     print(f"By category: {dict(sorted(categories.items()))}")
     print(f"PDF URLs matched: {pdf_matched}")

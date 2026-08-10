@@ -17,18 +17,26 @@ if (!khutba) {
 }
 
 const categoryLabels: Record<string, string> = {
+  'zapretnye-deyaniya': 'Запретные деяния',
+  'akida-i-manhadzh': 'Акида и манхадж',
+  'ibadaty': 'Ибадаты',
+  'prazdnichnye-hutby': 'Праздничные хутбы',
+  'smyagcheniya-serdec': 'Смягчения сердец и увещевания',
+  'zikry-i-molby': 'Зикры и мольбы',
+  'spodvizhniki': 'Сподвижники',
+  'sira': 'Сира',
+  'raznoe': 'Разное',
+  'general': 'Общие',
   'ramadan': 'Рамадан',
-  'sira': 'Жизнеописание Пророка ﷺ',
-  'companions': 'Сподвижники',
   'zul-hijjah': 'Зуль-хиджжа',
   'muharram': 'Мухаррам',
   'mawlid': 'Маулид',
-  'aqida': 'Акыда и манхадж',
-  'names-of-allah': 'Имена Аллаха',
   'shaban': 'Ша\'бан',
   'new-year': 'Новый год',
+  'names-of-allah': 'Имена Аллаха',
+  'aqida': 'Акыда и манхадж',
   'forbidden-deeds': 'Запретные деяния',
-  'general': 'Общие',
+  'companions': 'Сподвижники',
 };
 
 const catLabel = categoryLabels[khutba.category] || khutba.category;

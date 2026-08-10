@@ -29,18 +29,26 @@ function togglePlayer(id: number) {
 }
 
 const categoryAccentHsl: Record<string, string> = {
-  'ramadan': '35 92% 50%',
+  'zapretnye-deyaniya': '25 95% 53%',
+  'akida-i-manhadzh': '215 19% 35%',
+  'ibadaty': '200 98% 39%',
+  'prazdnichnye-hutby': '347 77% 50%',
+  'smyagcheniya-serdec': '271 81% 56%',
+  'zikry-i-molby': '160 84% 39%',
+  'spodvizhniki': '175 84% 32%',
   'sira': '142.1 70.6% 45.3%',
-  'companions': '175 84% 32%',
+  'raznoe': '220 9% 46%',
+  'general': '142.1 70.6% 45.3%',
+  'ramadan': '35 92% 50%',
   'zul-hijjah': '0 72% 51%',
   'muharram': '239 84% 67%',
   'mawlid': '271 81% 56%',
-  'aqida': '215 19% 35%',
-  'names-of-allah': '160 84% 39%',
   'shaban': '199 89% 48%',
   'new-year': '347 77% 50%',
+  'names-of-allah': '160 84% 39%',
+  'aqida': '215 19% 35%',
   'forbidden-deeds': '25 95% 53%',
-  'general': '142.1 70.6% 45.3%',
+  'companions': '175 84% 32%',
 };
 
 const years = computed(() => {

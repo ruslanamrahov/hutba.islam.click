@@ -53,9 +53,10 @@ npm run data         # Run data pipeline only
 
 Three Python scripts run in sequence via `npm run data`:
 
-1. **`parse_chat.py`** — reads `tg_chat/result.json`, extracts all catalog messages, parses khutba entries with number, title, category, year, Telegram links, text links. Outputs intermediate JSON.
+1. **`parse_chat.py`** — reads `tg_chat/result.json`, extracts all catalog messages, parses khutba entries with number, title, year, Telegram links, text links. Outputs intermediate JSON.
 2. **`scan_drive.py`** — Playwright script navigates year folders on `drive.google.com/drive/folders/1jsNA4_ISBlBRhFKQKey1ke9eV3Bh9nJE`, extracts file IDs and names. Run independently when Drive contents change.
-3. **`merge_data.py`** — matches Telegram khutba titles to Drive audio filenames, generates final `src/data/khutbas.json`.
+3. **`scrape_abuyahya.py`** — fetches khutba number → category mapping from `abuyahya.net` WordPress API. Category source of truth. Run when abuyahya.net categories change.
+4. **`merge_data.py`** — matches Telegram khutba titles to Drive audio filenames, applies abuyahya.net category mapping, generates final `src/data/khutbas.json`.
 
 ## Design Conventions
 
@@ -70,10 +71,22 @@ Design matches the reference project pattern (islamnury.org):
 
 ## Category Accent Colors
 
-Each category gets a distinct accent for visual differentiation:
+Categories sourced from abuyahya.net taxonomy. Each category gets a distinct accent for visual differentiation:
+
+### Primary (abuyahya.net)
+- `zapretnye-deyaniya` — orange (`25 95% 53%`)
+- `akida-i-manhadzh` — slate (`215 19% 35%`)
+- `ibadaty` — sky (`200 98% 39%`)
+- `prazdnichnye-hutby` — rose (`347 77% 50%`)
+- `smyagcheniya-serdec` — violet (`271 81% 56%`)
+- `zikry-i-molby` — emerald (`160 84% 39%`)
+- `spodvizhniki` — teal (`175 84% 32%`)
+- `sira` — green (default primary, `142.1 70.6% 45.3%`)
+- `raznoe` — muted (`220 9% 46%`)
+
+### Fallback (legacy, for khutbas not on abuyahya.net)
+- `general` — green (default)
 - `ramadan` — amber (`35 92% 50%`)
-- `sira` — green (default primary)
-- `companions` — teal (`175 84% 32%`)
 - `zul-hijjah` — warm red (`0 72% 51%`)
 - `muharram` — indigo (`239 84% 67%`)
 - `mawlid` — violet (`271 81% 56%`)
@@ -82,7 +95,7 @@ Each category gets a distinct accent for visual differentiation:
 - `shaban` — sky (`199 89% 48%`)
 - `new-year` — rose (`347 77% 50%`)
 - `forbidden-deeds` — orange (`25 95% 53%`)
-- `general` — green (default)
+- `companions` — teal (`175 84% 32%`)
 
 ## Media Hosting
 
