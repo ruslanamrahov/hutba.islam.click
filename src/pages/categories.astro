@@ -1,0 +1,56 @@
+---
+import Layout from '../layouts/Layout.astro';
+import Breadcrumbs from '../components/Breadcrumbs.astro';
+import khutbasData from '../data/khutbas.json';
+import { categoryLabel, categoryIcon } from '../lib/categories';
+
+interface Khutba {
+  id: number;
+  year: number;
+  category: string;
+}
+
+const khutbas = khutbasData as Khutba[];
+
+const topics = [...new Set(khutbas.map((k) => k.category))]
+  .map((slug) => ({
+    slug,
+    label: categoryLabel(slug),
+    icon: categoryIcon(slug),
+    count: khutbas.filter((k) => k.category === slug).length,
+  }))
+  .sort((a, b) => a.label.localeCompare(b.label, 'ru'));
+
+function plural(count: number): string {
+  const n = Math.abs(count) % 100;
+  const d = n % 10;
+  if (n > 10 && n < 20) return 'хутб';
+  if (d > 1 && d < 5) return 'хутбы';
+  if (d === 1) return 'хутба';
+  return 'хутб';
+}
+---
+
+<Layout title="Темы — Хутбы / Абу Яхья аль-Къирми">
+  <Breadcrumbs items={[{ label: 'Главная', href: '/' }, { label: 'Темы' }]} />
+
+  <section class="pb-10">
+    <div class="mb-6">
+      <h1 class="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">Хутбы по темам</h1>
+      <p class="mt-1 text-sm text-muted-foreground">
+        Категории с сайта Abuyahya.net — переход открывает список хутб по теме.
+      </p>
+    </div>
+
+    <div class="ay-topics">
+      {topics.map((t) => (
+        <a class="ay-topic" href={`/category/${t.slug}`}>
+          <div class="ay-card-icon">{t.icon}</div>
+          <h3>{t.label}</h3>
+          <p>{t.count} {plural(t.count)} по теме «{t.label.toLowerCase()}».</p>
+          <span class="ay-link">Смотреть хутбы →</span>
+        </a>
+      ))}
+    </div>
+  </section>
+</Layout>

@@ -1,0 +1,93 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import Breadcrumbs from '../../components/Breadcrumbs.astro';
+import khutbasData from '../../data/khutbas.json';
+import { categoryLabel, categoryIcon, yearLabel } from '../../lib/categories';
+
+interface Khutba {
+  id: number;
+  number: string;
+  title: string;
+  year: number;
+  category: string;
+  audioUrl: string;
+  textUrl: string;
+  telegramUrl: string;
+  videoUrl: string;
+  pdfUrl: string;
+}
+
+const khutbas = khutbasData as Khutba[];
+
+export function getStaticPaths() {
+  const slugs = [...new Set(khutbasData.map((k: { category: string }) => k.category))];
+  return slugs.map((slug) => ({ params: { cat: slug } }));
+}
+
+const { cat } = Astro.params;
+
+const list = khutbas
+  .filter((k) => k.category === cat)
+  .sort((a, b) => parseInt(a.number, 10) - parseInt(b.number, 10));
+
+if (list.length === 0) {
+  return Astro.redirect('/categories');
+}
+
+const label = categoryLabel(cat);
+const icon = categoryIcon(cat);
+
+function pad(number: string): string {
+  return number.padStart(2, '0');
+}
+---
+
+<Layout
+  title={`${label} — Хутбы / Абу Яхья аль-Къирми`}
+  description={`Хутбы по теме «${label}» (${list.length}). Слушайте аудиозаписи пятничных проповедей онлайн.`}
+>
+  <Breadcrumbs
+    items={[
+      { label: 'Главная', href: '/' },
+      { label: 'Темы', href: '/categories' },
+      { label },
+    ]}
+  />
+
+  <section class="pb-10">
+    <header class="mb-6">
+      <div class="mb-3 inline-flex items-center gap-3">
+        <span
+          class="grid h-11 w-11 place-items-center rounded-xl bg-secondary text-lg font-black text-primary"
+          data-category={cat}
+        >{icon}</span>
+        <h1 class="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">{label}</h1>
+      </div>
+      <p class="text-sm text-muted-foreground">Всего хутб в теме: {list.length}</p>
+    </header>
+
+    <ul class="ay-klist">
+      {list.map((k) => (
+        <li>
+          <span class="ay-kn">{pad(k.number)}</span>
+          <span class="ay-kt"><a href={`/khutba/${k.id}`}>{k.title}</a></span>
+          <span class="hidden text-xs text-muted-foreground sm:inline">{yearLabel(k.year)}</span>
+          <span class="ay-klinks">
+            {k.audioUrl && (
+              <a class="ay-mini" href={`/khutba/${k.id}`} title="Слушать">▶</a>
+            )}
+            {k.textUrl && (
+              <a class="ay-mini" href={k.textUrl} target="_blank" rel="noopener" title="Читать текст">📜</a>
+            )}
+            {k.videoUrl && (
+              <a class="ay-mini" href={k.videoUrl} target="_blank" rel="noopener" title="Смотреть видео">🎥</a>
+            )}
+            {k.pdfUrl && (
+              <a class="ay-mini" href={k.pdfUrl} target="_blank" rel="noopener" title="PDF">📄</a>
+            )}
+          </span>
+        </li>
+      ))}
+    </ul>
+  </section>
+</Layout>

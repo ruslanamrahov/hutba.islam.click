@@ -15,11 +15,13 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 INPUT = BASE_DIR / "scripts" / "_parsed.json"
 DRIVE_INPUT = BASE_DIR / "scripts" / "_drive_files.json"
 ABUYAHYA_INPUT = BASE_DIR / "scripts" / "_abuyahya_categories.json"
+MOCKUP_INPUT = BASE_DIR / "scripts" / "_mockup_links.json"
 PDF_DIR = BASE_DIR / "tg_chat" / "files"
 CHAT_EXPORT_PDF_DIR = BASE_DIR / "ChatExport_2026-08-09" / "files"
 OUTPUT = BASE_DIR / "src" / "data" / "khutbas.json"
 
 SPACES_BASE = "https://islamclick-coolify.ams3.digitaloceanspaces.com"
+PDF_CHANNEL = "https://t.me/alhadispdf"
 
 THEMATIC_FOLDERS = {
     "Зуль-хиджжа": "ibadaty",
@@ -57,6 +59,21 @@ def load_abuyahya_categories():
             entries = json.load(f)
         return [{"name": e["title"], "category": e["category"]} for e in entries]
     return []
+
+
+def load_mockup_links():
+    """Load curated per-row links from the mockup page, keyed by (year, number)."""
+    lookup = {}
+    if MOCKUP_INPUT.exists():
+        with open(MOCKUP_INPUT, "r", encoding="utf-8") as f:
+            rows = json.load(f)
+        for r in rows:
+            lookup[(r["year"], int(r["number"]))] = {
+                "textUrl": r.get("textUrl", ""),
+                "telegramUrl": r.get("telegramUrl", ""),
+                "videoUrl": r.get("videoUrl", ""),
+            }
+    return lookup
 
 
 def load_local_pdfs():
@@ -168,6 +185,7 @@ def merge():
     drive_files = load_drive_files()
     abuyahya_cats = load_abuyahya_categories()
     local_pdfs = load_local_pdfs()
+    mockup_lookup = load_mockup_links()
 
     # Telegram catalog as enrichment candidates (title -> category + links).
     tg_candidates = [
@@ -177,6 +195,7 @@ def merge():
             "year": t.get("year", 0),
             "telegramUrl": t.get("telegramUrl", ""),
             "textUrl": t.get("textUrl", ""),
+            "videoUrl": t.get("videoUrl", ""),
         }
         for t in tg_catalog
     ]
@@ -195,6 +214,7 @@ def merge():
         category = category_from_folder(folder)
         telegram_url = ""
         text_url = ""
+        video_url = ""
 
         tg = match_best(title, tg_candidates)
         if tg:
@@ -205,6 +225,7 @@ def merge():
                 year = tg["year"]
             telegram_url = tg["telegramUrl"]
             text_url = tg["textUrl"]
+            video_url = tg["videoUrl"]
 
         if category is None:
             kw = category_from_keywords(title)
@@ -216,6 +237,15 @@ def merge():
             category = "general"
 
         number = number_from_filename(df["name"])
+        if number.isdigit():
+            mock = mockup_lookup.get((year, int(number)))
+            if mock:
+                if mock["textUrl"]:
+                    text_url = mock["textUrl"]
+                if mock["telegramUrl"]:
+                    telegram_url = mock["telegramUrl"]
+                if mock["videoUrl"]:
+                    video_url = mock["videoUrl"]
         abu_match = match_best(title, abuyahya_cats)
         if abu_match:
             category = abu_match["category"]
@@ -239,7 +269,8 @@ def merge():
                 "audioUrl": f"{SPACES_BASE}/hutba/{audio_folder}/{audio_file}",
                 "textUrl": text_url,
                 "telegramUrl": telegram_url,
-                "pdfUrl": "",
+                "videoUrl": video_url,
+                "pdfUrl": PDF_CHANNEL,
             }
         )
 

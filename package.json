@@ -8,7 +8,7 @@
     "build": "npm run data && astro build",
     "preview": "astro preview",
     "astro": "astro",
-    "data": "python3 scripts/parse_chat.py && python3 scripts/merge_data.py"
+    "data": "python3 scripts/parse_chat.py && python3 scripts/parse_mockup.py && python3 scripts/merge_data.py"
   },
   "dependencies": {
     "@astrojs/vue": "^5.1.4",

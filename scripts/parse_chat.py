@@ -43,16 +43,6 @@ CATALOG_KEYS = {
 }
 
 
-def extract_text(msg):
-    parts = []
-    for item in msg.get("text", []):
-        if isinstance(item, str):
-            parts.append(item)
-        elif isinstance(item, dict):
-            parts.append(item.get("text", ""))
-    return "".join(parts)
-
-
 def extract_links(msg):
     links = []
     for item in msg.get("text", []):
@@ -109,6 +99,8 @@ def clean_title(title):
     title = re.sub(r"\s*🌐➤\s*текст\s*$", "", title).strip()
     title = re.sub(r"\s*🌐\s*$", "", title).strip()
     title = re.sub(r"\s*➤\s*текст\s*$", "", title).strip()
+    title = re.sub(r"\s*🌐➤\s*$", "", title).strip()
+    title = re.sub(r"\s*➤\s*$", "", title).strip()
     title = re.sub(r"\s+текст\s*$", "", title).strip()
     title = re.sub(r"\s+аудио\s*$", "", title).strip()
     title = re.sub(r"\s*_{2,}.*$", "", title).strip()
@@ -116,66 +108,101 @@ def clean_title(title):
     return title
 
 
-KHUTBA_LINE_RE = re.compile(
-    r"🎙\s*([⁰¹²³⁴⁵⁶⁷⁸⁹\d]+)\s*(?:[|]|\s+)\s*(.+)",
-    re.UNICODE,
-)
+TEXT_LINK_MARKERS = {
+    "текст",
+    "текст хутбы",
+    "читать текст",
+    "читать полный текст",
+    "читать полный текст хутбы",
+    "читать",
+    "полный текст",
+    "полный текст хутбы",
+}
 
 
-def build_links_lookup(links):
-    telegram = {}
-    text_links = {}
-    for l in links:
-        href = l["href"]
-        lt = l["text"].strip()
-        if "t.me/hutby_abuyahya" in href:
-            num = normalize_number(lt)
-            if num:
-                telegram[num] = href
-        elif "islam.click" in href:
-            num = normalize_number(lt)
-            if num:
-                text_links[num] = href
-    return telegram, text_links
+def parse_catalog_message(msg):
+    """Stream-parse a catalog message into khutba entries with inline links.
 
-
-def parse_entries_with_year_headers(text, links):
-    """Parse entries from text that has year section headers."""
-    telegram, text_map = build_links_lookup(links)
+    Entries begin at a `t.me/hutby_abuyahya` link whose text is a number.
+    Everything up to the next number link belongs to that entry: the title plus
+    optional islam.click (text) and youtube (video) links.
+    """
     entries = []
-    lines = text.split("\n")
-    current_year = None
+    current = None
+    year = None
 
-    for line in lines:
-        stripped = line.strip()
-        if not stripped:
-            continue
-
-        if YEAR_SECTION_RE.search(stripped):
-            year = parse_year_from_line(stripped)
-            if year is not None:
-                current_year = year
-            continue
-
-        m = KHUTBA_LINE_RE.match(stripped)
-        if not m:
-            continue
-
-        number = normalize_number(m.group(1))
-        title = clean_title(m.group(2))
-
+    def finalize(entry):
+        if not entry:
+            return
+        title = "".join(entry["title_parts"])
+        title = title.replace("\n", " ").replace("\xa0", " ")
+        title = re.sub(r"^\s*[|｜]\s*", "", title)
+        title = re.sub(r"[🎙📆🗓🗂📕📋]+", "", title)
+        title = clean_title(title)
         if not title or len(title) < 3:
+            return
+        entries.append(
+            {
+                "number": entry["number"],
+                "title": title,
+                "year": entry["year"],
+                "telegramUrl": entry["telegramUrl"],
+                "textUrl": entry["textUrl"],
+                "videoUrl": entry["videoUrl"],
+            }
+        )
+
+    for item in msg.get("text", []):
+        if isinstance(item, str):
+            s = item
+            if YEAR_SECTION_RE.search(s):
+                y = parse_year_from_line(s)
+                if y is not None:
+                    year = y
+            if current is not None:
+                current["title_parts"].append(s)
             continue
 
-        entry = {
-            "number": number,
-            "title": title,
-            "year": current_year or 0,
-            "telegramUrl": telegram.get(number, ""),
-            "textUrl": text_map.get(number, ""),
-        }
-        entries.append(entry)
+        href = item.get("href")
+        txt = item.get("text") or ""
+        if not href:
+            if YEAR_SECTION_RE.search(txt):
+                y = parse_year_from_line(txt)
+                if y is not None:
+                    year = y
+            if current is not None:
+                current["title_parts"].append(txt)
+            continue
 
+        if "t.me/hutby_abuyahya" in href:
+            num = normalize_number(txt)
+            if num.isdigit():
+                finalize(current)
+                current = {
+                    "number": num,
+                    "telegramUrl": href,
+                    "title_parts": [],
+                    "textUrl": "",
+                    "videoUrl": "",
+                    "year": year or 0,
+                }
+        elif "islam.click" in href:
+            if current is None:
+                continue
+            t = txt.strip().lower()
+            if t == "" or t in TEXT_LINK_MARKERS:
+                current["textUrl"] = href
+            else:
+                current["title_parts"].append(txt)
+                current["textUrl"] = href
+        elif "youtu" in href:
+            if current is not None:
+                current["videoUrl"] = href
+        else:
+            if current is not None:
+                current["title_parts"].append(txt)
+
+    finalize(current)
     return entries
 
 
@@ -216,10 +243,7 @@ def parse_result():
         category = info[0]
         default_year = info[1]
 
-        text = extract_text(msg)
-        links = extract_links(msg)
-
-        entries = parse_entries_with_year_headers(text, links)
+        entries = parse_catalog_message(msg)
 
         for entry in entries:
             entry["category"] = category
@@ -266,6 +290,7 @@ def parse_result():
                 "audioUrl": "",
                 "textUrl": k.get("textUrl", ""),
                 "telegramUrl": k.get("telegramUrl", ""),
+                "videoUrl": k.get("videoUrl", ""),
                 "pdfUrl": "",
             }
         )

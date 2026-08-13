@@ -1,47 +1,276 @@
 ---
 import Layout from '../layouts/Layout.astro';
-import KhutbaAccordion from '../components/KhutbaAccordion.vue';
 import khutbasData from '../data/khutbas.json';
+import { categoryLabel, categoryIcon, yearLabel } from '../lib/categories';
 
-const categoryLabels: Record<string, string> = {
-  'zapretnye-deyaniya': 'Запретные деяния',
-  'akida-i-manhadzh': 'Акида и манхадж',
-  'ibadaty': 'Ибадаты',
-  'prazdnichnye-hutby': 'Праздничные хутбы',
-  'smyagcheniya-serdec': 'Смягчения сердец и увещевания',
-  'zikry-i-molby': 'Зикры и мольбы',
-  'spodvizhniki': 'Сподвижники',
-  'sira': 'Сира',
-  'raznoe': 'Разное',
-  'general': 'Общие',
-  'ramadan': 'Рамадан',
-  'zul-hijjah': 'Зуль-хиджжа',
-  'muharram': 'Мухаррам',
-  'mawlid': 'Маулид',
-  'shaban': 'Ша\'бан',
-  'new-year': 'Новый год',
-  'names-of-allah': 'Имена Аллаха',
-  'aqida': 'Акыда и манхадж',
-  'forbidden-deeds': 'Запретные деяния',
-  'companions': 'Сподвижники',
-};
+interface Khutba {
+  id: number;
+  number: string;
+  title: string;
+  year: number;
+  category: string;
+  audioUrl: string;
+  textUrl: string;
+  telegramUrl: string;
+  videoUrl: string;
+  pdfUrl: string;
+}
+
+const khutbas = khutbasData as Khutba[];
+
+const yearValues = [...new Set(khutbas.map((k) => k.year))]
+  .filter((y) => y > 0)
+  .sort((a, b) => a - b);
+
+const hasYearZero = khutbas.some((k) => k.year === 0);
+
+function khutbasForYear(year: number): Khutba[] {
+  return khutbas
+    .filter((k) => k.year === year)
+    .sort((a, b) => parseInt(a.number, 10) - parseInt(b.number, 10));
+}
+
+const yearGroups = yearValues.map((year) => ({ year, khutbas: khutbasForYear(year) }));
+const yearZeroGroup = hasYearZero ? { year: 0, khutbas: khutbasForYear(0) } : null;
+
+const topics = [...new Set(khutbas.map((k) => k.category))]
+  .map((slug) => ({
+    slug,
+    label: categoryLabel(slug),
+    icon: categoryIcon(slug),
+    count: khutbas.filter((k) => k.category === slug).length,
+  }))
+  .sort((a, b) => a.label.localeCompare(b.label, 'ru'));
+
+function plural(count: number): string {
+  const n = Math.abs(count) % 100;
+  const d = n % 10;
+  if (n > 10 && n < 20) return 'хутб';
+  if (d > 1 && d < 5) return 'хутбы';
+  if (d === 1) return 'хутба';
+  return 'хутб';
+}
+
+function pad(number: string): string {
+  return number.padStart(2, '0');
+}
+
+const total = khutbas.length;
 ---
 
-<Layout title="Хутбы / Абу Яхья аль-Къирми — Каталог хутб">
-  <section class="hero-pattern rounded-2xl px-6 py-8 text-center sm:py-12">
-    <h1 class="text-3xl font-extrabold tracking-tight text-foreground sm:text-4xl">
-      Хутбы / Абу Яхья аль-Къирми
+<Layout title="Библиотека хутб — Абу Яхья аль-Къирми">
+  <section class="ay-hero pt-2">
+    <div class="ay-eyebrow">БИБЛИОТЕКА ХУТБ</div>
+    <h1 class="max-w-[820px] text-3xl font-extrabold leading-tight tracking-tight text-foreground sm:text-4xl">
+      Пятничные (джумуа) и праздничные наставления (‘Ид аль-Фитр и ‘Ид аль-Адха)
     </h1>
-    <p class="mx-auto mt-2 max-w-xl text-base text-muted-foreground sm:text-lg">
-      Пятничные (джумуа) и праздничные (Ид аль-Фитр и Ид аль-Атха)
+    <p class="mt-3 max-w-[700px] text-base text-muted-foreground">
+      Хутбы шейха Абу Яхьи (حفظه الله) — аудиозаписи, полные тексты и PDF.
     </p>
+    <div class="ay-search mt-6" id="search">
+      <input
+        type="text"
+        placeholder="Найти хутбу по названию или теме…"
+        data-search
+        aria-label="Поиск хутб"
+      />
+      <button type="button" class="ay-btn">Найти</button>
+    </div>
   </section>
 
-  <section class="mt-6 pb-10">
-    <KhutbaAccordion
-      khutbas={khutbasData}
-      categoryLabels={categoryLabels}
-      client:load
-    />
+  <section class="ay-section" id="years">
+    <div class="mb-4">
+      <h2 class="text-2xl font-bold tracking-tight text-foreground">Хутбы по годам</h2>
+      <p class="mt-1 text-sm text-muted-foreground">
+        🎙 аудио · 📜 текст · 🎥 видео (если есть) · 📄 PDF (общий канал Аль-Хадис)
+      </p>
+    </div>
+
+    <div class="ay-years-list">
+      {
+        yearGroups.map(({ year, khutbas: list }) => (
+          <details class="ay-year" id={`year-${year}`}>
+            <summary>
+              <span class="ay-year-label">{yearLabel(year)}</span>
+              <span class="ay-year-count">{list.length} {plural(list.length)}</span>
+            </summary>
+            <div class="ay-year-body">
+              <ul class="ay-klist">
+                {list.map((k) => (
+                  <li>
+                    <span class="ay-kn">{pad(k.number)}</span>
+                    <span class="ay-kt"><a href={`/khutba/${k.id}`}>{k.title}</a></span>
+                    <span class="ay-klinks">
+                      {k.audioUrl && (
+                        <button type="button" class="ay-mini ay-play" data-mp3={k.audioUrl} title="Слушать здесь">▶</button>
+                      )}
+                      {k.telegramUrl && (
+                        <a class="ay-mini" href={k.telegramUrl} target="_blank" rel="noopener" title="Открыть в Telegram">🎙</a>
+                      )}
+                      {k.textUrl && (
+                        <a class="ay-mini" href={k.textUrl} target="_blank" rel="noopener" title="Читать текст">📜</a>
+                      )}
+                      {k.videoUrl && (
+                        <a class="ay-mini" href={k.videoUrl} target="_blank" rel="noopener" title="Смотреть видео">🎥</a>
+                      )}
+                      {k.pdfUrl && (
+                        <a class="ay-mini" href={k.pdfUrl} target="_blank" rel="noopener" title="PDF в общем канале Аль-Хадис">📄</a>
+                      )}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </details>
+        ))
+      }
+
+      {
+        yearZeroGroup && (
+          <details class="ay-year" id="year-0">
+            <summary>
+              <span class="ay-year-label">{yearLabel(0)}</span>
+              <span class="ay-year-count">{yearZeroGroup.khutbas.length} {plural(yearZeroGroup.khutbas.length)}</span>
+            </summary>
+            <div class="ay-year-body">
+              <ul class="ay-klist">
+                {yearZeroGroup.khutbas.map((k) => (
+                  <li>
+                    <span class="ay-kn">{pad(k.number)}</span>
+                    <span class="ay-kt"><a href={`/khutba/${k.id}`}>{k.title}</a></span>
+                    <span class="ay-klinks">
+                      {k.audioUrl && (
+                        <button type="button" class="ay-mini ay-play" data-mp3={k.audioUrl} title="Слушать здесь">▶</button>
+                      )}
+                      {k.telegramUrl && (
+                        <a class="ay-mini" href={k.telegramUrl} target="_blank" rel="noopener" title="Открыть в Telegram">🎙</a>
+                      )}
+                      {k.textUrl && (
+                        <a class="ay-mini" href={k.textUrl} target="_blank" rel="noopener" title="Читать текст">📜</a>
+                      )}
+                      {k.videoUrl && (
+                        <a class="ay-mini" href={k.videoUrl} target="_blank" rel="noopener" title="Смотреть видео">🎥</a>
+                      )}
+                      {k.pdfUrl && (
+                        <a class="ay-mini" href={k.pdfUrl} target="_blank" rel="noopener" title="PDF в общем канале Аль-Хадис">📄</a>
+                      )}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </details>
+        )
+      }
+    </div>
+
+    <p class="ay-no-results" data-no-results hidden>Ничего не найдено. Попробуйте изменить запрос.</p>
+  </section>
+
+  <section class="ay-section" id="topics">
+    <div class="mb-4">
+      <h2 class="text-2xl font-bold tracking-tight text-foreground">Хутбы по темам</h2>
+      <p class="mt-1 text-sm text-muted-foreground">
+        Категории с сайта Abuyahya.net — переход открывает список хутб по теме.
+      </p>
+    </div>
+
+    <div class="ay-topics">
+      {topics.map((t) => (
+        <a class="ay-topic" href={`/category/${t.slug}`}>
+          <div class="ay-card-icon">{t.icon}</div>
+          <h3>{t.label}</h3>
+          <p>{t.count} {plural(t.count)} по теме «{t.label.toLowerCase()}».</p>
+          <span class="ay-link">Смотреть хутбы →</span>
+        </a>
+      ))}
+    </div>
+  </section>
+
+  <section class="ay-section pb-14" id="about">
+    <div class="ay-about-box">
+      <div class="ay-bismillah">﷽</div>
+      <h2 class="text-foreground">О проекте</h2>
+      <p class="ay-about-intro">Библиотека хутб шейха Абу Яхьи аль-Къирми (حفظه الله)</p>
+
+      <p>Ассаляму алейкум ва рахматуллахи ва баракатуху, дорогие братья и сестры!</p>
+      <p>Добро пожаловать в библиотеку хутб шейха Абу Яхьи (حفظه الله) — пятничные (джумуа) и праздничные хутбы (‘Ид аль-Фитр и ‘Ид аль-Адха), собранные по годам.</p>
+      <p>В библиотеке собрано более {total} хутб, из них часть набрана с аудиозаписей проповедей шейха. Полные тексты в формате PDF доступны на канале <a href="https://t.me/alhadispdf" target="_blank" rel="noopener" class="font-bold text-primary">t.me/alhadispdf</a>.</p>
+
+      <h3 class="text-foreground">Ссылки на материалы</h3>
+      <div class="ay-materials">
+        <div class="ay-material">🎧 Аудиозаписи</div>
+        <div class="ay-material">🎥 Видеозаписи некоторых хутб</div>
+        <div class="ay-material">📜 Полные тексты хутб</div>
+        <div class="ay-material"><a href="https://t.me/alhadispdf" target="_blank" rel="noopener">📄 PDF с текстом хутб</a></div>
+      </div>
+
+      <div class="ay-note"><strong>Важно:</strong> тексты хутб не проверялись шейхом и являются текстовой записью аудиозаписей. Несмотря на то что при подготовке материалов была проявлена максимальная внимательность, в тексте могут встречаться неточности.</div>
+
+      <p>Эти материалы подготовлены для того, чтобы мы с вами могли:</p>
+      <ul>
+        <li>читать хутбы и извлекать из них пользу;</li>
+        <li>использовать их при подготовке и проведении хутб (при необходимости сверяясь с аудиозаписями);</li>
+        <li>изучать их вместе со своими семьями и детьми;</li>
+        <li>распространять полезное знание среди мусульман.</li>
+      </ul>
+
+      <p>Просим Всевышнего Аллаха сделать этот труд искренним ради Его Лика, принести через него пользу мусульманам, простить возможные ошибки и даровать награду всем, кто принимал участие в подготовке этого проекта.</p>
+
+      <div class="ay-dua">جزاكم الله خيرًا</div>
+    </div>
   </section>
 </Layout>
+
+<script is:inline>
+  (function () {
+    var closeAll = function () {
+      document.querySelectorAll('.ay-player-row').forEach(function (el) { el.remove(); });
+      document.querySelectorAll('.ay-play').forEach(function (b) { b.textContent = '▶'; });
+    };
+
+    document.addEventListener('click', function (e) {
+      var btn = e.target.closest('.ay-play');
+      if (!btn) return;
+      var li = btn.closest('li');
+      var next = li.nextElementSibling;
+      if (next && next.classList.contains('ay-player-row')) {
+        closeAll();
+        return;
+      }
+      closeAll();
+      var row = document.createElement('li');
+      row.className = 'ay-player-row';
+      var audio = document.createElement('audio');
+      audio.controls = true;
+      audio.autoplay = true;
+      audio.preload = 'none';
+      audio.src = btn.getAttribute('data-mp3');
+      row.appendChild(audio);
+      li.parentNode.insertBefore(row, li.nextSibling);
+      btn.textContent = '■';
+    });
+
+    var searchInput = document.querySelector('[data-search]');
+    var noResults = document.querySelector('[data-no-results]');
+    if (searchInput) {
+      searchInput.addEventListener('input', function () {
+        var q = this.value.trim().toLowerCase();
+        var visible = 0;
+        document.querySelectorAll('.ay-year').forEach(function (d) {
+          var yearVisible = 0;
+          d.querySelectorAll('.ay-klist li:not(.ay-player-row)').forEach(function (li) {
+            var t = (li.querySelector('.ay-kt') ? li.querySelector('.ay-kt').textContent : '') || '';
+            var show = !q || t.toLowerCase().indexOf(q) !== -1;
+            li.style.display = show ? '' : 'none';
+            if (show) yearVisible++;
+          });
+          d.style.display = q && yearVisible === 0 ? 'none' : '';
+          visible += yearVisible;
+          if (q) d.open = true;
+        });
+        if (noResults) noResults.hidden = !(q && visible === 0);
+      });
+    }
+  })();
+</script>

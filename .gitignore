@@ -6,10 +6,12 @@ dist
 .DS_Store
 *.png
 *.jpg
+!public/logo.jpg
 *_thumb*
 scripts/_parsed.json
 scripts/_drive_files.json
 scripts/_test_files.json
+scripts/_mockup_links.json
 scripts/_downloads
 tg_chat/files
 tg_chat/stickers
