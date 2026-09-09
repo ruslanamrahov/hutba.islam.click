@@ -267,14 +267,17 @@
   list-style: none;
   margin: 8px 0 0;
   padding: 0;
+  column-count: 2;
+  column-gap: 28px;
 }
 .ay-klist li {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 6px 0;
+  padding: 5px 0;
   border-top: 1px solid hsl(var(--border) / 0.5);
-  font-size: 13.5px;
+  font-size: 13px;
+  break-inside: avoid;
 }
 .ay-klist li:first-child {
   border-top: 0;
@@ -307,10 +310,10 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 26px;
-  height: 26px;
+  width: 24px;
+  height: 24px;
   border-radius: 8px;
-  font-size: 14px;
+  font-size: 13px;
 }
 .ay-mini:hover {
   background: hsl(var(--secondary));
@@ -334,6 +337,7 @@
 .ay-player-row {
   padding: 8px 0 !important;
   border-top: 0 !important;
+  column-span: all;
 }
 .ay-player-row audio {
   width: 100%;
@@ -473,6 +477,9 @@
   }
   .ay-materials {
     grid-template-columns: 1fr 1fr;
+  }
+  .ay-klist {
+    column-count: 1;
   }
 }
 @media (max-width: 560px) {
