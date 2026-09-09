@@ -11,11 +11,14 @@ import re as _re
 import unicodedata
 from pathlib import Path
 
+import _islam_study_common as isl_common
+
 BASE_DIR = Path(__file__).resolve().parent.parent
 INPUT = BASE_DIR / "scripts" / "_parsed.json"
 DRIVE_INPUT = BASE_DIR / "scripts" / "_drive_files.json"
 ABUYAHYA_INPUT = BASE_DIR / "scripts" / "_abuyahya_categories.json"
 MOCKUP_INPUT = BASE_DIR / "scripts" / "_mockup_links.json"
+ISLAM_STUDY_INPUT = BASE_DIR / "scripts" / "_islam_study.json"
 PDF_DIR = BASE_DIR / "tg_chat" / "files"
 CHAT_EXPORT_PDF_DIR = BASE_DIR / "ChatExport_2026-08-09" / "files"
 OUTPUT = BASE_DIR / "src" / "data" / "khutbas.json"
@@ -178,6 +181,57 @@ def category_from_keywords(title):
     return None
 
 
+def merge_islam_study(khutbas):
+    """Append islam.study mirror khutbas missing from the Drive-derived catalog."""
+    if not ISLAM_STUDY_INPUT.exists():
+        return khutbas, 0
+
+    with open(ISLAM_STUDY_INPUT, "r", encoding="utf-8") as f:
+        mirror_entries = json.load(f)
+
+    new = isl_common.find_new_entries(mirror_entries, khutbas)
+    added = 0
+
+    for e in new:
+        year = e["year"]
+        folder = isl_common.year_folder(year)
+        if not folder or not e.get("audio"):
+            continue
+
+        title = e["title"]
+        number = e["number"]
+        filename = f"Audio{number}. {isl_common.sanitize_filename(title)}.mp3"
+
+        category = isl_common.category_from_abuyahya_url(e.get("abuyahyaUrl", ""))
+        if category is None:
+            category = category_from_keywords(title)
+        if category is None:
+            category = "general"
+        if category == "companions":
+            category = "spodvizhniki"
+        elif category == "forbidden-deeds":
+            category = "zapretnye-deyaniya"
+        elif category == "aqida":
+            category = "akida-i-manhadzh"
+
+        khutbas.append(
+            {
+                "number": number,
+                "title": title,
+                "year": year,
+                "category": category,
+                "audioUrl": f"{SPACES_BASE}/hutba/{folder}/{filename}",
+                "textUrl": e.get("textUrl", ""),
+                "telegramUrl": e.get("telegramUrl", ""),
+                "videoUrl": "",
+                "pdfUrl": e.get("pdfUrl", "") or PDF_CHANNEL,
+            }
+        )
+        added += 1
+
+    return khutbas, added
+
+
 def merge():
     with open(INPUT, "r", encoding="utf-8") as f:
         tg_catalog = json.load(f)
@@ -282,6 +336,8 @@ def merge():
                 k["pdfUrl"] = f"{SPACES_BASE}/hutba/pdfs/{best['filename']}"
                 pdf_matched += 1
 
+    khutbas, islam_study_added = merge_islam_study(khutbas)
+
     for i, k in enumerate(khutbas):
         k["id"] = i + 1
 
@@ -301,6 +357,7 @@ def merge():
     print(f"By year: {dict(sorted(years.items(), key=lambda x: (str(x[0]), x[0])))}")
     print(f"By category: {dict(sorted(categories.items()))}")
     print(f"PDF URLs matched: {pdf_matched}")
+    print(f"Added from islam.study mirror: {islam_study_added}")
 
     return khutbas
 
